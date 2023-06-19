@@ -5,26 +5,34 @@ import pandas as pd
 
 from data_preprocessing import utils
 
-result = []
 
 def main():
+   start = int(input("START INDEX: "))
+   end = int(input("END INDEX: "))
+
    results = pd.read_csv('results.csv') 
 
-   result = load_checkpoint()
-   
-   for i in range(len(results)):
-       if i < len(result):
-           continue
-
+   for i in range(start, end):
        color, gray = get_images(results['label'][i])
 
        color, gray = cv2.imread(color), cv2.imread(gray)
        color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
        color = utils.template_matching(color, gray)
 
+       result = 1 
+       def on_press(event):
+           if event.key == 'k':
+               plt.close()
+           elif event.key == 'l':
+               result = 0
+               plt.close()
+           elif event.key == 'z':
+               if i == 0:
+                   return
+               results['result'][i - 1] = 0
+
        fig = plt.figure(figsize=(10, 5))
        fig.canvas.mpl_connect('key_press_event', on_press)
-
 
        plt.subplot(1, 2, 1)
        plt.imshow(color)
@@ -32,15 +40,14 @@ def main():
 
        plt.subplot(1, 2, 2)
        plt.imshow(gray)
+       plt.xlabel(f"PSNR: {results['psnr'][i]}, SSIM: {results['ssim'][i]}")
 
        plt.show()
+       results['result'][i] = result
 
-       with open("checkpoint.txt", "w") as f:
-           f.write(str(result))
-
-   print(len(result))
-   results['result'] = result
-   results.to_csv('results.csv', index=False)
+       # Checkpointing
+       if i % 10 == 0:
+           results.to_csv('results.csv', index=False)
 
 
 def get_images(label):
@@ -68,16 +75,7 @@ def load_checkpoint():
         return []
 
 
-def on_press(event):
-    if event.key == 'k':
-        result.append(1)
-        plt.close()
-    elif event.key == 'l':
-        result.append(0)
-        plt.close()
-    elif event.key == 'z':
-        result.pop()
-        result.append(0)
+
 
 if __name__ == '__main__':
     main()
